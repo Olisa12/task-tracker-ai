@@ -4,7 +4,7 @@ import Task from '@/models/Task';
 import { verifyToken } from '@/lib/auth';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); // Remove module-level instantiation
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -31,6 +31,12 @@ export async function POST(request: NextRequest) {
   const taskTitles = tasks.map(t => t.title).join(', ');
 
   const prompt = `Summarize the following tasks: ${taskTitles}`;
+
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ summary: 'OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.' });
+  }
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
