@@ -13,11 +13,28 @@ export async function POST(request: NextRequest) {
 
   // Demo user for testing without DB
   if (email === 'demo@example.com' && password === 'demo123') {
-    const token = jwt.sign({ userId: 'demo-user-id' }, process.env.JWT_SECRET!, { expiresIn: '1d' });
+    const token = jwt.sign({ userId: 'demo-user-id' }, 'demo-secret-key', { expiresIn: '1d' });
     return NextResponse.json({ token, user: { id: 'demo-user-id', name: 'Demo User', email } });
   }
 
-  await dbConnect();
+  const db = await dbConnect();
+
+  // Demo mode - allow login with any credentials when DB unavailable
+  if (!db) {
+    // Accept any email/password combination in demo mode
+    const demoToken = jwt.sign(
+      { userId: 'demo-user-id', name: email.split('@')[0], email },
+      'demo-secret-key',
+      { expiresIn: '1d' }
+    );
+
+    return NextResponse.json({
+      token: demoToken,
+      user: { id: 'demo-user-id', name: email.split('@')[0], email },
+      isDemo: true,
+      message: 'Demo mode: Logged in successfully (no database)'
+    });
+  }
 
   const user = await User.findOne({ email });
   if (!user) {
